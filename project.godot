@@ -15,9 +15,17 @@ config/tags=PackedStringArray("component", "system")
 config/features=PackedStringArray("4.3", "C#", "GL Compatibility")
 config/icon="res://icon.svg"
 
+[autoload]
+
+ModuleManager="*res://addons/modular_system/Scripts/Core/ModuleManager.cs"
+
 [dotnet]
 
 project/assembly_name="Modular System"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/modular_system/plugin.cfg")
 
 [rendering]
 
