@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://dmwr3v5iujpec"]
+
+[ext_resource type="Script" uid="uid://bi5j54d3yie8t" path="res://addons/modular_system/Examples/ModuleManager/ModuleManagerExample.cs" id="1_vekdq"]
+
+[node name="ModuleManagerExample" type="Node"]
+script = ExtResource("1_vekdq")
