@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 
 /// <summary>
 /// Provides utility methods for scanning assemblies and registering methods decorated with a given attribute.
@@ -29,6 +30,13 @@ public static class AttributeProcessorUtils
 
     public delegate void PropertyAttributeHandler<TAttribute>(
         PropertyInfo property,
+        object instance,
+        TAttribute attribute
+    )
+        where TAttribute : Attribute;
+
+    public delegate Task FieldAttributeHandlerAsync<TAttribute>(
+        FieldInfo field,
         object instance,
         TAttribute attribute
     )
@@ -184,6 +192,69 @@ public static class AttributeProcessorUtils
             {
                 var attr = field.GetCustomAttribute<TAttribute>();
                 handler(field, instance, attr);
+            }
+        }
+    }
+
+    public static async Task ScanAndRegisterFieldAttributesAsync<TAttribute>(
+        Assembly assembly,
+        FieldAttributeHandlerAsync<TAttribute> handler
+    )
+        where TAttribute : Attribute
+    {
+        assembly ??= Assembly.GetExecutingAssembly();
+        var types = assembly
+            .GetTypes()
+            .Where(t =>
+                t.GetFields(
+                        BindingFlags.Public
+                            | BindingFlags.NonPublic
+                            | BindingFlags.Instance
+                            | BindingFlags.Static
+                    )
+                    .Any(f => f.GetCustomAttribute<TAttribute>() != null)
+            );
+
+        foreach (var type in types)
+        {
+            if (
+                type.GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+                    .Any(f => f.GetCustomAttribute<TAttribute>() != null)
+            )
+            {
+                await RegisterFieldAttributesAsync(null, type, handler);
+            }
+
+            if (type.GetConstructor(Type.EmptyTypes) != null)
+            {
+                var instance = Activator.CreateInstance(type);
+                await RegisterFieldAttributesAsync(instance, type, handler);
+            }
+        }
+    }
+
+    public static async Task RegisterFieldAttributesAsync<TAttribute>(
+        object instance,
+        Type type,
+        FieldAttributeHandlerAsync<TAttribute> handler
+    )
+        where TAttribute : Attribute
+    {
+        var fields = (type ?? instance.GetType())
+            .GetFields(
+                BindingFlags.Public
+                    | BindingFlags.NonPublic
+                    | BindingFlags.Instance
+                    | BindingFlags.Static
+            )
+            .Where(f => f.GetCustomAttribute<TAttribute>() != null);
+
+        foreach (var field in fields)
+        {
+            if (field.IsStatic || instance != null)
+            {
+                var attr = field.GetCustomAttribute<TAttribute>();
+                await handler(field, instance, attr);
             }
         }
     }
